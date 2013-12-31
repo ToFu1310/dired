@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>name</key>
+    <string>dired</string>
+    <key>scopeName</key>
+    <string>text.dired</string>
+    <key>uuid</key>
+    <string>638375b8-3509-4d37-a8d8-afad7a95b428</string>
+    <key>fileTypes</key>
+    <array>
+        <string>dired</string>
+    </array>
+    <key>patterns</key>
+    <array>
+        <!-- The path is the only thing left-aligned. -->
+        <dict>
+            <key>match</key>
+            <string>^\S+$</string>
+            <key>name</key>
+            <string>comment.dired.directory</string>
+        </dict>
+        <!-- directory: ends with slash -->
+        <dict>
+            <key>match</key>
+            <string>^\s(.*(\\|/))$</string>
+            <key>name</key>
+            <string>dired.item.directory</string>
+        </dict>
+        <!-- file -->
+        <dict>
+            <key>match</key>
+            <string>^\s(.*)$</string>
+            <key>name</key>
+            <string>dired.item.file</string>
+        </dict>
+        <!-- marked -->
+        <dict>
+            <key>match</key>
+            <string>^(\*.+)$</string>
+            <key>name</key>
+            <string>dired.marked</string>
+        </dict>
+    </array>
+</dict>
+</plist>

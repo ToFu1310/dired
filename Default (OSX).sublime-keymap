@@ -1,0 +1,88 @@
+[
+  {
+      "keys": ["n"],
+      "command": "dired_next_line",
+      "args": { "forward": true },
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["p"],
+      "command": "dired_next_line",
+      "args": { "forward": false },
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["enter"],
+      "command": "dired_select",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["o"],
+      "command": "dired_select",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["+"],
+      "command": "dired_mkdir",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["r"],
+      "command": "dired_refresh",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["q"],
+      "command": "close",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["m"],
+      "command": "dired_mark",
+      "args": { "mark": "*" },
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["u"],
+      "command": "dired_mark",
+      "args": { "mark": " " },
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["U"],
+      "command": "dired_mark",
+      "args": { "mark": " ", "markall": true },
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["t"],
+      "command": "dired_mark",
+      "args": { "mark": "t", "markall": true },
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["D"],
+      "command": "dired_delete",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["M"],
+      "command": "dired_move",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["*","."],
+      "command": "dired_mark_extension",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["R"],
+      "command": "dired_rename",
+      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+  },
+  {
+      "keys": ["tab"],
+      "command": "dired_complete",
+      "context": [{"key": "dired_complete"}]
+  }
+]

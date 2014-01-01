@@ -52,6 +52,10 @@ Note that these keybindings use capital letters.
 
 * `R` - Rename the file the cursor is on.  This ignores marks.
 
+### Other
+
+* `r` - Refresh the view
+
 ## Themes
 
 Unfortunately there are no obvious scopes to use, so you will probably need to update your

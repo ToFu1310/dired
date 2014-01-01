@@ -32,11 +32,6 @@
       "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
   },
   {
-      "keys": ["q"],
-      "command": "close",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
-  },
-  {
       "keys": ["m"],
       "command": "dired_mark",
       "args": { "mark": "*" },

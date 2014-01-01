@@ -13,6 +13,28 @@ FILENAME_OFFSET = 2
 map_wid_to_info = {}
 # Map from window id that is displaying an input that needs completion to a CompletionInfo.
 
+HELP_TEXT = """\
+
+# Marking
+#   m = mark
+#   u = unmark
+#   t = toggle all marks
+#   U = unmark all
+#   *. = mark by file extension
+#
+# Operations
+#   Enter/o = Open file / view directory
+#   D = delete marked files
+#   M = move marked or selected files
+#   R = rename file at cursor
+#   + = create new directory
+#
+# Other
+#   n = move to next file
+#   p = move to previous file
+#   r = refresh view
+"""
+
 class DiredBaseCommand:
     """
     Convenience functions for dired TextCommands
@@ -21,11 +43,11 @@ class DiredBaseCommand:
     def path(self):
         return self.view.settings().get('dired')
 
-    def linecount(self):
+    def filecount(self):
         """
-        Returns the number of lines in the view.
+        Returns the number of files and directories in the view.
         """
-        return self.view.rowcol(self.view.size())[0] + 1
+        return self.view.settings().get('dired_count', 0)
 
     def move(self, forward=None):
         """
@@ -33,23 +55,19 @@ class DiredBaseCommand:
         """
         assert forward in (True, False), 'forward must be set to True or False'
 
-        files = self.itemregion()
+        files = self.fileregion()
         if files.empty():
             return
 
         pt = self.view.sel()[0].a
 
-        print('start:', pt, files)
-
         if files.contains(pt):
             # Try moving by one line.
             line = self.view.line(pt)
             pt = forward and (line.b + 1) or (line.a - 1)
-            print('moving:', line, pt)
 
         if not files.contains(pt):
             # Not (or no longer) in the list of files, so move to the closest edge.
-            print('does not contain?', files, pt)
             pt = (pt > files.b) and files.b or files.a
 
         line = self.view.line(pt)
@@ -58,16 +76,17 @@ class DiredBaseCommand:
         self.view.sel().clear()
         self.view.sel().add(Region(pt, pt))
 
-    def itemregion(self):
+
+    def fileregion(self):
         """
         Returns a region containing the lines containing filenames. If there are no filenames,
         this will be an empty region.
         """
-        count = self.linecount()
-        if count == 1:
+        count = self.filecount()
+        if count == 0:
             # Just the directory name.
             return Region(0, 0)
-        return Region(self.view.text_point(1, 0), self.view.size())
+        return Region(self.view.text_point(1, 0), self.view.text_point(count+1, 0)-1)
 
 
     def get_selected(self):
@@ -75,24 +94,25 @@ class DiredBaseCommand:
         Returns a list of selected filenames.
         """
         names = set()
-        itemregion = self.itemregion()
+        fileregion = self.fileregion()
         for sel in self.view.sel():
             lines = self.view.lines(sel)
             for line in lines:
-                if itemregion.contains(line):
+                if fileregion.contains(line):
                     text = self.view.substr(line)
                     names.add(RE_FILE.match(text).group(1))
         return sorted(list(names))
 
     def get_marked(self):
         names = []
-        itemregion = self.itemregion()
-        if not itemregion.empty():
-            for line in self.view.lines(itemregion):
+        fileregion = self.fileregion()
+        if not fileregion.empty():
+            for line in self.view.lines(fileregion):
                 text = self.view.substr(line)
                 if text.startswith('*'):
                     names.append(RE_FILE.match(text).group(1))
         return names
+
 
     def _mark(self, edit, mark=None, regions=None):
         """
@@ -112,7 +132,7 @@ class DiredBaseCommand:
 
         self.view.set_read_only(False)
 
-        filergn = self.itemregion()
+        filergn = self.fileregion()
 
         for region in regions:
             for line in self.view.lines(region):
@@ -203,7 +223,6 @@ class DiredCommand(WindowCommand):
             self.window.focus_view(info.view)
             self.window.run_command('close_file')
 
-
 class DiredRefreshCommand(TextCommand, DiredBaseCommand):
     """
     Populates or repopulates a dired view.
@@ -227,6 +246,7 @@ class DiredRefreshCommand(TextCommand, DiredBaseCommand):
 
         text = [path]
         text.extend(['{} {}'.format(n in marked and '*' or ' ', n) for n in f])
+        text.append(HELP_TEXT)
 
         self.view.set_read_only(False)
         self.view.erase(edit, Region(0, self.view.size()))
@@ -234,9 +254,11 @@ class DiredRefreshCommand(TextCommand, DiredBaseCommand):
         self.view.set_syntax_file('Packages/dired/dired.tmLanguage')
         self.view.set_read_only(True)
 
+        self.view.settings().set('dired_count', len(f))
+
         # Place the cursor.
         if f:
-            pt = self.itemregion().a
+            pt = self.fileregion().a
             if goto:
                 if isdir(join(path, goto)) and not goto.endswith(os.sep):
                     goto += os.sep
@@ -401,7 +423,7 @@ class DiredMkdir(TextCommand, DiredBaseCommand):
 
 class DiredMarkExtensionCommand(TextCommand, DiredBaseCommand):
     def run(self, edit, ext=None):
-        filergn = self.itemregion()
+        filergn = self.fileregion()
         if filergn.empty():
             return
 
@@ -413,7 +435,7 @@ class DiredMarkExtensionCommand(TextCommand, DiredBaseCommand):
             # edit object.  (Sublime's command design really sucks.)
             def _markfunc(oldmark, filename):
                 return filename.endswith(ext) and '*' or oldmark
-            self._mark(edit, mark=_markfunc, regions=self.itemregion())
+            self._mark(edit, mark=_markfunc, regions=self.fileregion())
 
     def on_done(self, ext):
         ext = ext.strip()
@@ -439,7 +461,7 @@ class DiredMarkCommand(TextCommand, DiredBaseCommand):
     def run(self, edit, mark='*', markall=False):
         assert mark in ('*', ' ', 't')
 
-        filergn = self.itemregion()
+        filergn = self.fileregion()
         if filergn.empty():
             return
 
@@ -484,7 +506,6 @@ class DiredDeleteCommand(TextCommand, DiredBaseCommand):
 class DiredMoveCommand(TextCommand, DiredBaseCommand):
     def run(self, edit):
         files = self.get_marked() or self.get_selected()
-        print('files:', files)
         if files:
             self.view.window().show_input_panel('Move to:', self.path, self.on_done, None, None)
 
@@ -508,7 +529,7 @@ class DiredMoveCommand(TextCommand, DiredBaseCommand):
 class DiredRenameCommand(TextCommand, DiredBaseCommand):
     def run(self, edit, newname=None):
         pt = self.view.sel()[0].a
-        if not self.itemregion().contains(pt):
+        if not self.fileregion().contains(pt):
             return
 
         line = self.view.line(pt)

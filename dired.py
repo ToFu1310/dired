@@ -5,8 +5,7 @@ from sublime_plugin import WindowCommand, EventListener, TextCommand
 import os, re, shutil
 from os.path import basename, dirname, abspath, isdir, exists, join, isabs, normpath, normcase
 
-RE_DIR  = re.compile(r'^[ \*] (.*)(\\|/)$')
-RE_FILE = re.compile(r'^[ \*] (.*)$') # also matches dir, so check RE_DIR first
+RE_FILE = re.compile(r'^[ \*] (.*)$')
 
 FILENAME_OFFSET = 2
 

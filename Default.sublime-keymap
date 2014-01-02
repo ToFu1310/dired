@@ -3,77 +3,135 @@
       "keys": ["n"],
       "command": "dired_next_line",
       "args": { "forward": true },
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["p"],
       "command": "dired_next_line",
       "args": { "forward": false },
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["enter"],
       "command": "dired_select",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["o"],
       "command": "dired_select",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["+"],
       "command": "dired_mkdir",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["r"],
       "command": "dired_refresh",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["m"],
       "command": "dired_mark",
-      "args": { "mark": "*" },
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "args": { "mark": true },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["u"],
       "command": "dired_mark",
-      "args": { "mark": " " },
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "args": { "mark": false },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["U"],
       "command": "dired_mark",
-      "args": { "mark": " ", "markall": true },
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "args": { "mark": false, "markall": true },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["t"],
       "command": "dired_mark",
-      "args": { "mark": "t", "markall": true },
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "args": { "mark": "toggle", "markall": true },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["D"],
       "command": "dired_delete",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["M"],
       "command": "dired_move",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["*","."],
       "command": "dired_mark_extension",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
   },
   {
       "keys": ["R"],
       "command": "dired_rename",
-      "context": [{ "key": "selector", "operator": "equal", "operand": "text.dired" } ]
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
+  },
+  {
+    "keys" : ["ctrl+enter"],
+    "command": "dired_rename_commit",
+    "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": false },
+    ]
+  },
+  {
+    "keys" : ["ctrl+escape"],
+    "command": "dired_rename_cancel",
+    "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": false },
+    ]
   },
   {
       "keys": ["tab"],

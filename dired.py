@@ -2,37 +2,35 @@
 import sublime, sublime_plugin
 from sublime import Region
 from sublime_plugin import WindowCommand, EventListener, TextCommand
-import os, re, shutil
+import os, re, shutil, tempfile
 from os.path import basename, dirname, abspath, isdir, exists, join, isabs, normpath, normcase
 
-RE_FILE = re.compile(r'^[ \*] (.*)$')
-
-FILENAME_OFFSET = 2
+RE_FILE = re.compile(r'^([^\\// ].*)$')
 
 map_wid_to_info = {}
 # Map from window id that is displaying an input that needs completion to a CompletionInfo.
 
-HELP_TEXT = """\
+NORMAL_HELP = """\
+ m = mark
+ u = unmark
+ t = toggle all marks
+ U = unmark all
+ *. = mark by file extension
 
-# Marking
-#   m = mark
-#   u = unmark
-#   t = toggle all marks
-#   U = unmark all
-#   *. = mark by file extension
-#
-# Operations
-#   Enter/o = Open file / view directory
-#   D = delete marked files
-#   M = move marked or selected files
-#   R = rename file at cursor
-#   + = create new directory
-#
-# Other
-#   n = move to next file
-#   p = move to previous file
-#   r = refresh view
-"""
+ Enter/o = Open file / view directory
+ D = delete marked files
+ M = move marked or selected files
+ R = rename file at cursor
+ + = create new directory
+
+ n = move to next file
+ p = move to previous file
+ r = refresh view"""
+
+RENAME_HELP = """\
+ Rename files by editing them directly, then:
+ Ctrl+Enter = apply changes
+ Ctrl+Escape = discard changes"""
 
 class DiredBaseCommand:
     """
@@ -70,10 +68,8 @@ class DiredBaseCommand:
             pt = (pt > files.b) and files.b or files.a
 
         line = self.view.line(pt)
-        pt = line.a + FILENAME_OFFSET
-
         self.view.sel().clear()
-        self.view.sel().add(Region(pt, pt))
+        self.view.sel().add(Region(line.a, line.a))
 
 
     def fileregion(self):
@@ -85,7 +81,14 @@ class DiredBaseCommand:
         if count == 0:
             # Just the directory name.
             return Region(0, 0)
-        return Region(self.view.text_point(1, 0), self.view.text_point(count+1, 0)-1)
+        return Region(self.view.text_point(2, 0), self.view.text_point(count+2, 0)-1)
+
+
+    def get_all(self):
+        """
+        Returns a list of all filenames in the view.
+        """
+        return [ RE_FILE.match(self.view.substr(l)).group(1) for l in self.view.lines(self.fileregion()) ]
 
 
     def get_selected(self):
@@ -103,23 +106,18 @@ class DiredBaseCommand:
         return sorted(list(names))
 
     def get_marked(self):
-        names = []
-        fileregion = self.fileregion()
-        if not fileregion.empty():
-            for line in self.view.lines(fileregion):
-                text = self.view.substr(line)
-                if text.startswith('*'):
-                    names.append(RE_FILE.match(text).group(1))
-        return names
-
+        lines = []
+        for region in self.view.get_regions('marked'):
+            lines.extend(self.view.lines(region))
+        return [ RE_FILE.match(self.view.substr(line)).group(1) for line in lines ]
 
     def _mark(self, edit, mark=None, regions=None):
         """
         Marks the requested files.
 
         mark
-            Either ' ' or '*' to hardcode the mark to set, or a function `func(oldmark, filename)`
-            that returns the mark (again ' ' or '*').
+            True, False, or a function with signature `func(oldmark, filename)`.  The function
+            should return True or False.
 
         regions
             Either a single region or a sequence of regions.  Only files within the region will
@@ -129,27 +127,47 @@ class DiredBaseCommand:
         if isinstance(regions, Region):
             regions = [ regions ]
 
-        self.view.set_read_only(False)
-
         filergn = self.fileregion()
+
+        # We can't update regions for a key, only replace, so we need to record the existing
+        # marks.
+        previous = self.view.get_regions('marked')
+        marked = { RE_FILE.match(self.view.substr(r)).group(1): r for r in previous }
 
         for region in regions:
             for line in self.view.lines(region):
                 if filergn.contains(line):
                     text = self.view.substr(line)
-                    oldmark  = text[0]
                     filename = RE_FILE.match(text).group(1)
 
-                    if type(mark) is not str:
-                        newmark = mark(oldmark, filename)
-                        if newmark is None:
-                            continue
+                    if mark not in (True, False):
+                        newmark = mark(filename in marked, filename)
+                        assert newmark in (True, False), 'Invalid mark: {}'.format(newmark)
                     else:
                         newmark = mark
 
-                    self.view.replace(edit, Region(line.a, line.a + 1), newmark)
+                    if newmark:
+                        marked[filename] = line
+                    else:
+                        marked.pop(filename, None)
 
-        self.view.set_read_only(True)
+        if marked:
+            r = sorted(list(marked.values()), key=lambda region: region.a)
+            self.view.add_regions('marked', r, 'dired.marked', 'dot', 0)
+        else:
+            self.view.erase_regions('marked')
+
+
+    def set_help_text(self, edit, text):
+        # There is only 1 help text area, but the scope selector will skip blank lines
+        # so use the union of all of the regions.
+        regions = self.view.find_by_selector('comment.dired.help')
+        region = regions[0]
+        for other in regions[1:]:
+            region = region.cover(other)
+        start = region.begin()
+        self.view.erase(edit, region)
+        self.view.insert(edit, start, text)
 
 
 class CompletionInfo:
@@ -201,6 +219,7 @@ class DiredCommand(WindowCommand):
         view.set_scratch(True)
         view.set_name(basename(path.rstrip(os.sep)))
         view.settings().set('dired', path)
+        view.settings().set('command_mode', True)
         self.window.focus_view(view)
         view.run_command('dired_refresh')
 
@@ -243,17 +262,32 @@ class DiredRefreshCommand(TextCommand, DiredBaseCommand):
 
         marked = set(self.get_marked())
 
-        text = [path]
-        text.extend(['{} {}'.format(n in marked and '*' or ' ', n) for n in f])
-        text.append(HELP_TEXT)
+        text = [ path ]
+        text.append('')
+        text.extend(f)
+        text.append('')
+        text.append(NORMAL_HELP)
 
         self.view.set_read_only(False)
+
         self.view.erase(edit, Region(0, self.view.size()))
         self.view.insert(edit, 0, '\n'.join(text))
         self.view.set_syntax_file('Packages/dired/dired.tmLanguage')
-        self.view.set_read_only(True)
-
         self.view.settings().set('dired_count', len(f))
+
+        if marked:
+            # Even if we have the same filenames, they may have moved so we have to manually
+            # find them again.
+            regions = []
+            for line in self.view.lines(self.fileregion()):
+                filename = RE_FILE.match(self.view.substr(line)).group(1)
+                if filename in marked:
+                    regions.append(line)
+            self.view.add_regions('marked', regions, 'dired.marked', 'dot', 0)
+        else:
+            self.view.erase_regions('marked')
+
+        self.view.set_read_only(True)
 
         # Place the cursor.
         if f:
@@ -268,7 +302,7 @@ class DiredRefreshCommand(TextCommand, DiredBaseCommand):
                     pass
 
             self.view.sel().clear()
-            self.view.sel().add(Region(pt + FILENAME_OFFSET, pt + FILENAME_OFFSET))
+            self.view.sel().add(Region(pt, pt))
 
 
 class DiredCompleteCommand(WindowCommand):
@@ -394,7 +428,6 @@ class DiredNextLineCommand(TextCommand, DiredBaseCommand):
     def run(self, edit, forward=None):
         self.move(forward)
 
-
 class DiredSelect(TextCommand, DiredBaseCommand):
     def run(self, edit):
         path = self.path
@@ -433,7 +466,7 @@ class DiredMarkExtensionCommand(TextCommand, DiredBaseCommand):
             # We have already asked for the extension but had to re-run the command to get an
             # edit object.  (Sublime's command design really sucks.)
             def _markfunc(oldmark, filename):
-                return filename.endswith(ext) and '*' or oldmark
+                return filename.endswith(ext) and True or oldmark
             self._mark(edit, mark=_markfunc, regions=self.fileregion())
 
     def on_done(self, ext):
@@ -457,8 +490,8 @@ class DiredMarkCommand(TextCommand, DiredBaseCommand):
     If there is no selection and mark is '*', the cursor is moved to the next line so
     successive files can be marked by repeating the mark key binding (e.g. 'm').
     """
-    def run(self, edit, mark='*', markall=False):
-        assert mark in ('*', ' ', 't')
+    def run(self, edit, mark=True, markall=False):
+        assert mark in (True, False, 'toggle')
 
         filergn = self.fileregion()
         if filergn.empty():
@@ -471,8 +504,9 @@ class DiredMarkCommand(TextCommand, DiredBaseCommand):
             regions = self.view.sel()
 
         def _toggle(oldmark, filename):
-            return (oldmark == ' ') and '*' or ' '
-        if mark == 't':
+            return not oldmark
+        if mark == 'toggle':
+            # Special internal case.
             mark = _toggle
 
         self._mark(edit, mark=mark, regions=regions)
@@ -525,25 +559,94 @@ class DiredMoveCommand(TextCommand, DiredBaseCommand):
                 shutil.move(fqn, value)
         self.view.run_command('dired_refresh')
 
+
 class DiredRenameCommand(TextCommand, DiredBaseCommand):
-    def run(self, edit, newname=None):
-        pt = self.view.sel()[0].a
-        if not self.fileregion().contains(pt):
+    def run(self, edit):
+        if self.filecount():
+            # Store the original filenames so we can compare later.
+            self.view.settings().set('rename', self.get_all())
+            self.view.settings().set('command_mode', False)
+            self.view.set_read_only(False)
+            self.set_help_text(edit, RENAME_HELP)
+
+
+class DiredRenameCancelCommand(TextCommand, DiredBaseCommand):
+    """
+    Cancel rename mode.
+    """
+    def run(self, edit):
+        self.view.settings().erase('rename')
+        self.view.settings().set('command_mode', True)
+        self.view.run_command('dired_refresh')
+
+
+class RenameError(Exception):
+    pass
+
+
+class DiredRenameCommitCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit):
+        if not self.view.settings().has('rename'):
+            # Shouldn't happen, but we want to cleanup when things go wrong.
+            self.view.run_command('dired_refresh')
             return
 
-        line = self.view.line(pt)
-        text = self.view.substr(line)
-        filename = RE_FILE.match(text).group(1)
+        # The user *might* have messed up the buffer badly so we can't just use the same file
+        # region without some verification.  We'll check every line in the buffer and make sure
+        # that no lines look like filenames that are outside of the old filename area and that
+        # there are the same number of filenames.  You can rename a file to just about
+        # anything, so I'm not going to validate that right now.
 
-        if not newname:
-            self.view.window().show_input_panel('Rename:', filename, self.on_done, None, None)
-        elif filename != newname:
-            os.rename(join(self.path, filename), join(self.path, newname))
-            self.view.run_command('dired_refresh', { 'goto': newname })
+        before = self.view.settings().get('rename')
+
+        try:
+            start = 2
+            stop  = start + len(before)
+            after = []
+
+            for lineno, line in enumerate(self.view.lines(Region(0, self.view.size()))):
+                text  = self.view.substr(line)
+                match = RE_FILE.match(text)
+                if match:
+                    if not start <= lineno < stop:
+                        print('INVALID LINE:', lineno, text)
+                        raise RenameError('Line {} should not be modified'.format(lineno+1))
+                    after.append(match.group(1))
+
+            if len(after) != len(before):
+                raise RenameError('You cannot add or remove lines')
+
+            if len(set(after)) != len(after):
+                raise RenameError('There are duplicate filenames')
+
+            diffs = [ (b, a) for (b, a) in zip(before, after) if b != a ]
+            if diffs:
+                existing = set(before)
+                while diffs:
+                    b, a = diffs.pop(0)
+
+                    if a in existing:
+                        # There is already a file with this name.  Give it a temporary name (in
+                        # case of cycles like "x->z and z->x") and put it back on the list.
+                        tmp = tempfile.NamedTemporaryFile(delete=False, dir=self.path).name
+                        os.unlink(tmp)
+                        diffs.append((tmp, a))
+                        a = tmp
+
+                    print('dired rename: {} --> {}'.format(b, a))
+                    os.rename(join(self.path, b), join(self.path, a))
+                    existing.remove(b)
+                    existing.add(a)
+
+            self.view.settings().erase('rename')
+            self.view.settings().set('command_mode', True)
+            self.view.run_command('dired_refresh')
+
+        except RenameError as ex:
+            sublime.error_message(ex)
 
     def on_done(self, newname):
         newname = newname.strip()
         if not newname:
             return
-
         self.view.run_command('dired_rename', { 'newname': newname })

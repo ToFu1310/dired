@@ -1,10 +1,7 @@
-# SublimeText dired
+# Sublime Text dired
 
-A SublimeText 3 plugin that displays a directory in a view, allowing easy file manipulation,
+A Sublime Text 3 plugin that displays a directory in a view, allowing easy file manipulation,
 loosely copied from emacs dired mode.
-
-*WARNING:* The keybindings for the operations are experimental and may change in future
-versions, particularly if more operations need to be added.
 
 ## Installation
 
@@ -16,78 +13,38 @@ Or you can clone this repo into your *Sublime Text 3/Packages*
 The plugin provides a `dired` command which allows you to choose a directory to display.  The
 files in the directory are displayed in a list allowing them to be moved, renamed, or deleted.
 
-There is no binding for the dired command (so run it from the Command Palette).
+### Key Bindings
 
-### Marking
+There is no default binding for the dired command itself, but once in a dired view the
+following are available:
 
-Marked files have a '*' at the beginning of the line.
-
-* `m` - Mark selected files.  If there is no selection, the file at the cursor
-  is marked and the cursor is moved to the next line.
-
-* `u` - Unmark selected files.  If there is no selection, the file at the cursor
-  is unmarked and the cursor is moved to the next line.
-
-* `U` - Unmark all files
-
+* `D` - delete marked files
+* `M` - move marked or selected files
+* `R` - rename marked or selected files
+* `r` - refresh
+* `m` - mark file
+* `u` - unmark file
+* `U` - unmark all files
 * `t` - toggle all marks
+* `*.` - mark by file extension
 
-* `*.` - (asterisk followed by period) Mark by file extension
+### Delete
 
-To mark all files, use toggle.
+Deletes marked files after confirmation.
 
-### Operations
+### Move
 
-Note that these keybindings use capital letters.
+The move command asks for a target directory and moves marked or selected files.
 
-* `D` - Delete marked files and directories (recursively) after confirmation.
+If no files are marked, all files that are part of a selection or have a cursor are moved,
+allowing you to use the mark commands, multiple cursors, or selection.
 
-  Since it is a dangerous command it only works with marked items, not selections or the
-  cursor.
+### Rename
 
-* `M` - Move marked or selected files to a target directory.
+The rename command makes the view editable so files can be renamed using all of your
+Sublime Text tools: multiple cursors, search and replace, etc.
 
-  If there are marked files, they will be moved.  Otherwise selected files or the file at the
-  cursor.
+To commit your changes, use `Ctrl+Enter` (dired_rename_commit).  To cancel changes, use
+`Ctrl+Escape` (dired_rename_cancel).
 
-* `R` - Rename the file the cursor is on.  This ignores marks.
-
-### Other
-
-* `r` - Refresh the view
-
-## Themes
-
-Unfortunately there are no obvious scopes to use, so you will probably need to update your
-theme.  Suggestions for scopes are welcome.
-
-* comment.dired.directory - The directory being viewed, at the top.  Defaults to the comment color.
-* dired.item.directory
-* dired.item.file
-* dired.marked - marked files or directories.
-
-Here is an example theme setting that displays directories in blue and marked items in red:
-
-    <dict>
-        <key>name</key>
-        <string>dired path</string>
-        <key>settings</key>
-        <dict>
-            <key>foreground</key>
-            <string>#8080ff</string>
-        </dict>
-        <key>scope</key>
-        <string>dired.item.directory</string>
-    </dict>
-
-    <dict>
-        <key>name</key>
-        <string>dired marked</string>
-        <key>settings</key>
-        <dict>
-            <key>foreground</key>
-            <string>#ff8080</string>
-        </dict>
-        <key>scope</key>
-        <string>dired.marked</string>
-    </dict>
+Rename compares the names before and after editing, so you must not add or remove lines.

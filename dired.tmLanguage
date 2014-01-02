@@ -14,38 +14,40 @@
     </array>
     <key>patterns</key>
     <array>
-        <!-- The path is the only thing left-aligned. -->
+        <!--
         <dict>
             <key>match</key>
             <string>^\S+$</string>
             <key>name</key>
             <string>comment.dired.directory</string>
         </dict>
+        -->
         <!-- directory: ends with slash -->
         <dict>
             <key>match</key>
-            <string>^\s(.*(\\|/))$</string>
+            <string>^(\S.*(\\|/))$</string>
             <key>name</key>
             <string>dired.item.directory</string>
         </dict>
         <!-- file -->
         <dict>
             <key>match</key>
-            <string>^\s(.*)$</string>
+            <string>^(\S.*)$</string>
             <key>name</key>
             <string>dired.item.file</string>
         </dict>
-        <!-- marked -->
+        <!-- marked
         <dict>
             <key>match</key>
             <string>^(\*.+)$</string>
             <key>name</key>
             <string>dired.marked</string>
         </dict>
-        <!-- help -->
+        -->
+        <!-- help starts with a space and then a key -->
         <dict>
             <key>match</key>
-            <string>^#   (\S+) =.+$</string>
+            <string>^ (\S+) =.+$</string>
             <key>name</key>
             <string>comment.dired.help</string>
             <key>captures</key>
@@ -59,7 +61,7 @@
         </dict>
         <dict>
             <key>match</key>
-            <string>^#.*$</string>
+            <string>^ Rename files by editing.*$</string>
             <key>name</key>
             <string>comment.dired.help</string>
         </dict>

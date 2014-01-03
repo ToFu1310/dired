@@ -19,9 +19,9 @@ following are available:
 * `u` - up to parent
 * `n` - move to next file
 * `p` - move to previous file
-* `D` - delete marked files
-* `M` - move marked or selected files
-* `R` - rename marked or selected files
+* `D` - delete files
+* `M` - move files
+* `R` - rename files
 * `r` - refresh
 * `m` - toggle mark
 * `U` - unmark all files
@@ -30,24 +30,16 @@ following are available:
 * `Enter` - open file/directory
 * `Ctrl/Alt/Cmd+Enter` - open file/directory in new view
 
-### Delete
-
-Deletes marked files after confirmation.
-
-### Move
-
-The move command asks for a target directory and moves marked or selected files.
-
-If no files are marked, all files that are part of a selection or have a cursor are moved,
-allowing you to use the mark commands, multiple cursors, or selection.
+If there are marked files, operations only affect those files.  Otherwise files in selections
+or with cursors on them are affected.  This works nicely with multiple cursors and selections.
 
 ### Rename
 
-The rename command makes the view editable so files can be renamed using all of your
-Sublime Text tools: multiple cursors, search and replace, etc.
+The rename command puts the view into "rename mode".  The view is made editable so files can be
+renamed directly in the view using all of your Sublime Text tools: multiple cursors, search and
+replace, etc.
 
-To commit your changes, use `Ctrl+Enter` (dired_rename_commit).  To cancel changes, use
-`Ctrl+Escape` (dired_rename_cancel).
+Use `Ctrl+Enter` to commit your changes and `Ctrl+Escape` to cancel them.
 
 Rename compares the names before and after editing, so you must not add or remove lines.
 

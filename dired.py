@@ -19,15 +19,15 @@ NORMAL_HELP = """\
  *. = mark by file extension
 
  Enter/o = Open file / view directory
- D = delete marked files
- M = move marked or selected files
- R = rename file at cursor
+ R = rename
+ M = move
+ D = delete
  cd = create directory
  cf = create file
 
- n = move to next file
- p = move to previous file
  u = up to parent directory
+ p = move to previous file
+ n = move to next file
  r = refresh view"""
 
 RENAME_HELP = """\
@@ -591,7 +591,7 @@ class DiredMarkCommand(TextCommand, DiredBaseCommand):
 
 class DiredDeleteCommand(TextCommand, DiredBaseCommand):
     def run(self, edit):
-        files = self.get_marked()
+        files = self.get_marked() or self.get_selected()
         if files:
             # Yes, I know this is English.  Not sure how Sublime is translating.
             if len(files) == 1:

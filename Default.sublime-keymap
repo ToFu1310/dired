@@ -52,8 +52,18 @@
       ]
   },
   {
-      "keys": ["+"],
-      "command": "dired_mkdir",
+      "keys": ["c", "d"],
+      "command": "dired_create",
+      "args": { "which": "directory" },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.dired_rename_mode", "operand": false }
+      ]
+  },
+  {
+      "keys": ["c", "f"],
+      "command": "dired_create",
+      "args": { "which": "file" },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
         { "key": "setting.dired_rename_mode", "operand": false }

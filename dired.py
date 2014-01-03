@@ -22,7 +22,8 @@ NORMAL_HELP = """\
  D = delete marked files
  M = move marked or selected files
  R = rename file at cursor
- + = create new directory
+ cd = create directory
+ cf = create file
 
  n = move to next file
  p = move to previous file
@@ -276,6 +277,7 @@ class DiredCommand(WindowCommand):
             self.window.focus_view(info.view)
             self.window.run_command('close_file')
 
+
 class DiredRefreshCommand(TextCommand, DiredBaseCommand):
     """
     Populates or repopulates a dired view.
@@ -331,7 +333,7 @@ class DiredRefreshCommand(TextCommand, DiredBaseCommand):
                 if isdir(join(path, goto)) and not goto.endswith(os.sep):
                     goto += os.sep
                 try:
-                    line = f.index(goto) + 1
+                    line = f.index(goto) + 2
                     pt = self.view.text_point(line, 0)
                 except ValueError:
                     pass
@@ -487,17 +489,40 @@ class DiredSelect(TextCommand, DiredBaseCommand):
                 self.view.window().open_file(fqn)
 
 
-class DiredMkdir(TextCommand, DiredBaseCommand):
-    def run(self, edit):
-        self.view.window().show_input_panel('Directory:', '', self.on_done, None, None)
+class DiredCreateCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit, which=None):
+        assert which in ('file', 'directory'), "which: " + which
 
-    def on_done(self, value):
+        # Is there a better way to do this?  Why isn't there some kind of context?  I assume
+        # the command instance is global and really shouldn't have instance informaiton.
+        callback = getattr(self, 'on_done_' + which, None)
+
+        prompt = which.capitalize() + ':'
+        self.view.window().show_input_panel(prompt, '', callback, None, None)
+
+    def on_done_file(self, value):
+        self._on_done('file', value)
+
+    def on_done_directory(self, value):
+        self._on_done('directory', value)
+
+    def _on_done(self, which, value):
         value = value.strip()
-        if value:
-            fqn = join(self.path, value)
+        if not value:
+            return
+
+        fqn = join(self.path, value)
+        if exists(fqn):
+            sublime.error_message('{} already exists'.format(fqn))
+            return
+
+        if which == 'directory':
             if not exists(fqn):
                 os.makedirs(fqn)
-            self.view.run_command('dired_refresh', {'goto': value})
+        else:
+            open(fqn, 'wb')
+
+        self.view.run_command('dired_refresh', {'goto': value})
 
 
 class DiredMarkExtensionCommand(TextCommand, DiredBaseCommand):

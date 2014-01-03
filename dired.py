@@ -195,24 +195,44 @@ class DiredCommand(WindowCommand):
             directory view with no input panel.
         """
         if path and not input:
+            # A path was provided and we were requested to not ask for input.  Show the view.
             if not isdir(path):
                 print('dired: Invalid path "{}"'.format(path))
             self._show_view(path)
         else:
-            if not path:
-                view = self.window.active_view()
-                path = view.file_name()
-                if path:
-                    path = dirname(path)
+            # Ask the user for the directory, starting from the one provided or the next best
+            # choice.
+            path = self._determine_path(path)
 
-            path = path or ''
-
-            if not path.endswith(os.sep) and isdir(path):
+            if not path.endswith(os.sep):
                 path += os.sep
 
             map_wid_to_info[self.window.id()] = CompletionInfo(self.window.id(), path)
             self.window.show_input_panel('Directory:', path, self.on_done, self.on_change, self.on_cancel)
 
+    def _determine_path(self, path):
+        """
+        Determine the best path to start with.
+        """
+        # Use the provided path if it is valid.
+        if path and isdir(path):
+            return path
+
+        # If the current file is associated with a file, open its directory.
+        view = self.window.active_view()
+        path = view.file_name()
+        if path:
+            return dirname(path)
+
+        # If there is a project, use the folder.
+        data = self.window.project_data()
+        if data and 'folders' in data:
+            folders = data['folders']
+            if folders:
+                return folders[0]['path']
+
+        # Finally, default to the user's home directory.
+        return os.path.expanduser('~')
 
     def _show_view(self, path):
         view = self.window.new_file()

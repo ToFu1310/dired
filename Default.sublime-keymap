@@ -161,6 +161,14 @@
     ]
   },
   {
+    "keys" : ["g"],
+    "command": "dired_goto",
+    "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.dired_rename_mode", "operand": false },
+    ]
+  },
+  {
       "keys": ["tab"],
       "command": "dired_complete",
       "context": [{"key": "dired_complete"}]

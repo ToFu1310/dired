@@ -5,7 +5,7 @@
       "args": { "forward": true },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -14,7 +14,7 @@
       "args": { "forward": false },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -22,7 +22,7 @@
       "command": "dired_select",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -31,7 +31,7 @@
       "args": { "new_view": true },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -40,7 +40,7 @@
       "args": { "new_view": true },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -48,7 +48,7 @@
       "command": "dired_select",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -56,7 +56,7 @@
       "command": "dired_mkdir",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -64,7 +64,7 @@
       "command": "dired_refresh",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -73,7 +73,7 @@
       "args": { "mark": "toggle" },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -82,7 +82,7 @@
       "args": { "mark": false, "markall": true },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -91,7 +91,7 @@
       "args": { "mark": "toggle", "markall": true },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -99,7 +99,7 @@
       "command": "dired_up",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -107,7 +107,7 @@
       "command": "dired_delete",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -115,7 +115,7 @@
       "command": "dired_move",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -123,7 +123,7 @@
       "command": "dired_mark_extension",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -131,7 +131,7 @@
       "command": "dired_rename",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
+        { "key": "setting.dired_rename_mode", "operand": false }
       ]
   },
   {
@@ -139,7 +139,7 @@
     "command": "dired_rename_commit",
     "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": false },
+        { "key": "setting.dired_rename_mode", "operand": true },
     ]
   },
   {
@@ -147,7 +147,7 @@
     "command": "dired_rename_cancel",
     "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": false },
+        { "key": "setting.dired_rename_mode", "operand": true },
     ]
   },
   {

@@ -254,7 +254,7 @@ class DiredCommand(WindowCommand):
             view.set_name(basename(path.rstrip(os.sep)))
             view.settings().set('dired_path', path)
 
-        view.settings().set('command_mode', True)
+        view.settings().set('dired_rename_mode', False)
         self.window.focus_view(view)
         view.run_command('dired_refresh')
 
@@ -475,7 +475,7 @@ class DiredSelect(TextCommand, DiredBaseCommand):
                 filename = filenames[0]
                 self.view.set_name(filename.strip(os.sep))
                 self.view.settings().set('dired_path', join(path, filename))
-                self.view.settings().set('command_mode', True)
+                self.view.settings().set('dired_rename_mode', False)
                 self.view.run_command('dired_refresh')
                 return
 
@@ -612,7 +612,7 @@ class DiredRenameCommand(TextCommand, DiredBaseCommand):
         if self.filecount():
             # Store the original filenames so we can compare later.
             self.view.settings().set('rename', self.get_all())
-            self.view.settings().set('command_mode', False)
+            self.view.settings().set('dired_rename_mode', True)
             self.view.set_read_only(False)
             self.set_help_text(edit, RENAME_HELP)
 
@@ -623,7 +623,7 @@ class DiredRenameCancelCommand(TextCommand, DiredBaseCommand):
     """
     def run(self, edit):
         self.view.settings().erase('rename')
-        self.view.settings().set('command_mode', True)
+        self.view.settings().set('dired_rename_mode', False)
         self.view.run_command('dired_refresh')
 
 
@@ -686,7 +686,7 @@ class DiredRenameCommitCommand(TextCommand, DiredBaseCommand):
                     existing.add(a)
 
             self.view.settings().erase('rename')
-            self.view.settings().set('command_mode', True)
+            self.view.settings().set('dired_rename_mode', False)
             self.view.run_command('dired_refresh')
 
         except RenameError as ex:

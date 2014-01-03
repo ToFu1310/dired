@@ -5,14 +5,15 @@ from sublime_plugin import WindowCommand, EventListener, TextCommand
 import os, re, shutil, tempfile
 from os.path import basename, dirname, abspath, isdir, exists, join, isabs, normpath, normcase
 
+# Each dired view will store its path in its local settings as 'dired_path'.
+
 RE_FILE = re.compile(r'^([^\\// ].*)$')
 
 map_wid_to_info = {}
 # Map from window id that is displaying an input that needs completion to a CompletionInfo.
 
 NORMAL_HELP = """\
- m = mark
- u = unmark
+ m = toggle mark
  t = toggle all marks
  U = unmark all
  *. = mark by file extension
@@ -25,6 +26,7 @@ NORMAL_HELP = """\
 
  n = move to next file
  p = move to previous file
+ u = up to parent directory
  r = refresh view"""
 
 RENAME_HELP = """\
@@ -32,13 +34,18 @@ RENAME_HELP = """\
  Ctrl+Enter = apply changes
  Ctrl+Escape = discard changes"""
 
+
+def reuse_view():
+    return sublime.load_settings('dired.sublime-settings').get('reuse_view', False)
+
+
 class DiredBaseCommand:
     """
     Convenience functions for dired TextCommands
     """
     @property
     def path(self):
-        return self.view.settings().get('dired')
+        return self.view.settings().get('dired_path')
 
     def filecount(self):
         """
@@ -235,10 +242,18 @@ class DiredCommand(WindowCommand):
         return os.path.expanduser('~')
 
     def _show_view(self, path):
-        view = self.window.new_file()
-        view.set_scratch(True)
-        view.set_name(basename(path.rstrip(os.sep)))
-        view.settings().set('dired', path)
+        if not path.endswith(os.sep):
+            path += os.sep
+
+        for view in self.window.views():
+            if view.settings().get('dired_path', None) == path:
+                break
+        else:
+            view = self.window.new_file()
+            view.set_scratch(True)
+            view.set_name(basename(path.rstrip(os.sep)))
+            view.settings().set('dired_path', path)
+
         view.settings().set('command_mode', True)
         self.window.focus_view(view)
         view.run_command('dired_refresh')
@@ -449,9 +464,21 @@ class DiredNextLineCommand(TextCommand, DiredBaseCommand):
         self.move(forward)
 
 class DiredSelect(TextCommand, DiredBaseCommand):
-    def run(self, edit):
+    def run(self, edit, new_view=False):
         path = self.path
         filenames = self.get_selected()
+
+        # If reuse view is turned on, refresh the existing window if there is only one item and
+        # it is a directory.
+        if not new_view and reuse_view():
+            if len(filenames) == 1 and isdir(join(path, filenames[0])):
+                filename = filenames[0]
+                self.view.set_name(filename.strip(os.sep))
+                self.view.settings().set('dired_path', join(path, filename))
+                self.view.settings().set('command_mode', True)
+                self.view.run_command('dired_refresh')
+                return
+
         for filename in filenames:
             fqn = join(path, filename)
             if isdir(fqn):
@@ -670,3 +697,17 @@ class DiredRenameCommitCommand(TextCommand, DiredBaseCommand):
         if not newname:
             return
         self.view.run_command('dired_rename', { 'newname': newname })
+
+
+class DiredUpCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit):
+        parent = dirname(self.path.rstrip(os.sep)) + os.sep
+        if parent == self.path:
+            return
+
+        if reuse_view():
+            self.view.set_name(basename(parent.rstrip(os.sep)))
+            self.view.settings().set('dired_path', parent)
+            self.view.run_command('dired_refresh')
+        else:
+            self.view.window().run_command('dired', { 'path': parent, 'input': False })

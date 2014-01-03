@@ -26,6 +26,24 @@
       ]
   },
   {
+      "keys": ["super+enter"],
+      "command": "dired_select",
+      "args": { "new_view": true },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
+  },
+  {
+      "keys": ["ctrl+enter"],
+      "command": "dired_select",
+      "args": { "new_view": true },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
+  },
+  {
       "keys": ["o"],
       "command": "dired_select",
       "context": [
@@ -52,16 +70,7 @@
   {
       "keys": ["m"],
       "command": "dired_mark",
-      "args": { "mark": true },
-      "context": [
-        { "key": "selector", "operator": "equal", "operand": "text.dired" },
-        { "key": "setting.command_mode", "operand": true }
-      ]
-  },
-  {
-      "keys": ["u"],
-      "command": "dired_mark",
-      "args": { "mark": false },
+      "args": { "mark": "toggle" },
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
         { "key": "setting.command_mode", "operand": true }
@@ -80,6 +89,14 @@
       "keys": ["t"],
       "command": "dired_mark",
       "args": { "mark": "toggle", "markall": true },
+      "context": [
+        { "key": "selector", "operator": "equal", "operand": "text.dired" },
+        { "key": "setting.command_mode", "operand": true }
+      ]
+  },
+  {
+      "keys": ["u"],
+      "command": "dired_up",
       "context": [
         { "key": "selector", "operator": "equal", "operand": "text.dired" },
         { "key": "setting.command_mode", "operand": true }

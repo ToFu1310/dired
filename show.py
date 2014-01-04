@@ -3,11 +3,10 @@ import os
 from os.path import basename
 from .common import first
 
-def show(window, path, view_id=None, ignore_existing=False):
+def show(window, path, view_id=None, ignore_existing=False, goto=None):
     """
     Determines the correct view to use, creating one if necessary, and prepares it.
     """
-    print("SHOW: path=", path, "ignore:", ignore_existing)
     if not path.endswith(os.sep):
         path += os.sep
 
@@ -29,4 +28,4 @@ def show(window, path, view_id=None, ignore_existing=False):
     view.settings().set('dired_path', path)
     view.settings().set('dired_rename_mode', False)
     window.focus_view(view)
-    view.run_command('dired_refresh')
+    view.run_command('dired_refresh', { 'goto': goto })

@@ -394,12 +394,8 @@ class DiredUpCommand(TextCommand, DiredBaseCommand):
         if parent == self.path:
             return
 
-        if reuse_view():
-            self.view.set_name(basename(parent.rstrip(os.sep)))
-            self.view.settings().set('dired_path', parent)
-            self.view.run_command('dired_refresh')
-        else:
-            self.view.window().run_command('dired', { 'path': parent, 'input': False })
+        view_id = (self.view.id() if reuse_view() else None)
+        show(self.view.window(), parent, view_id, goto=basename(self.path.rstrip(os.sep)))
 
 
 class DiredGotoCommand(TextCommand, DiredBaseCommand):

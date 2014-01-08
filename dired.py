@@ -311,6 +311,11 @@ class DiredRenameCommand(TextCommand, DiredBaseCommand):
             self.view.set_read_only(False)
             self.set_help_text(edit, RENAME_HELP)
 
+            # Mark the original filename lines so we can make sure they are in the same
+            # place.
+            r = self.fileregion()
+            self.view.add_regions('rename', [ r ], '', '', 0)
+
 
 class DiredRenameCancelCommand(TextCommand, DiredBaseCommand):
     """
@@ -333,59 +338,47 @@ class DiredRenameCommitCommand(TextCommand, DiredBaseCommand):
             self.view.run_command('dired_refresh')
             return
 
-        # The user *might* have messed up the buffer badly so we can't just use the same file
-        # region without some verification.  We'll check every line in the buffer and make sure
-        # that no lines look like filenames that are outside of the old filename area and that
-        # there are the same number of filenames.  You can rename a file to just about
-        # anything, so I'm not going to validate that right now.
-
         before = self.view.settings().get('rename')
 
-        try:
-            start = 2
-            stop  = start + len(before)
-            after = []
+        # We marked the set of files with a region.  Make sure the region still has the same
+        # number of files.
+        after = []
 
-            for lineno, line in enumerate(self.view.lines(Region(0, self.view.size()))):
-                text  = self.view.substr(line)
-                match = RE_FILE.match(text)
-                if match:
-                    if not start <= lineno < stop:
-                        print('INVALID LINE:', lineno, text)
-                        raise RenameError('Line {} should not be modified'.format(lineno+1))
-                    after.append(match.group(1))
+        for region in self.view.get_regions('rename'):
+            for line in self.view.lines(region):
+                after.append(self.view.substr(line).strip())
 
-            if len(after) != len(before):
-                raise RenameError('You cannot add or remove lines')
+        if len(after) != len(before):
+            sublime.error_message('You cannot add or remove lines')
+            return
 
-            if len(set(after)) != len(after):
-                raise RenameError('There are duplicate filenames')
+        if len(set(after)) != len(after):
+            sublime.error_message('There are duplicate filenames')
+            return
 
-            diffs = [ (b, a) for (b, a) in zip(before, after) if b != a ]
-            if diffs:
-                existing = set(before)
-                while diffs:
-                    b, a = diffs.pop(0)
+        diffs = [ (b, a) for (b, a) in zip(before, after) if b != a ]
+        if diffs:
+            existing = set(before)
+            while diffs:
+                b, a = diffs.pop(0)
 
-                    if a in existing:
-                        # There is already a file with this name.  Give it a temporary name (in
-                        # case of cycles like "x->z and z->x") and put it back on the list.
-                        tmp = tempfile.NamedTemporaryFile(delete=False, dir=self.path).name
-                        os.unlink(tmp)
-                        diffs.append((tmp, a))
-                        a = tmp
+                if a in existing:
+                    # There is already a file with this name.  Give it a temporary name (in
+                    # case of cycles like "x->z and z->x") and put it back on the list.
+                    tmp = tempfile.NamedTemporaryFile(delete=False, dir=self.path).name
+                    os.unlink(tmp)
+                    diffs.append((tmp, a))
+                    a = tmp
 
-                    print('dired rename: {} --> {}'.format(b, a))
-                    os.rename(join(self.path, b), join(self.path, a))
-                    existing.remove(b)
-                    existing.add(a)
+                print('dired rename: {} --> {}'.format(b, a))
+                os.rename(join(self.path, b), join(self.path, a))
+                existing.remove(b)
+                existing.add(a)
 
-            self.view.settings().erase('rename')
-            self.view.settings().set('dired_rename_mode', False)
-            self.view.run_command('dired_refresh')
-
-        except RenameError as ex:
-            sublime.error_message(ex)
+        self.view.erase_regions('rename')
+        self.view.settings().erase('rename')
+        self.view.settings().set('dired_rename_mode', False)
+        self.view.run_command('dired_refresh')
 
 
 class DiredUpCommand(TextCommand, DiredBaseCommand):

@@ -28,7 +28,17 @@ NORMAL_HELP = """\
  g = goto directory
  p = move to previous file
  n = move to next file
- r = refresh view"""
+ r = refresh view
+
+ B = Goto Anywhere(goto any directory, bookmark or project dir) 
+ ab = add to bookmark
+ ap = add to project
+ rb = remove from bookmark
+ ra = remove from project
+
+ P = toggle preview mode on/off
+
+ j = jump to file/dir name """
 
 RENAME_HELP = """\
  Rename files by editing them directly, then:
@@ -66,7 +76,6 @@ class DiredCommand(WindowCommand):
 
         # Use the user's home directory.
         return os.path.expanduser('~')
-
 
 class DiredRefreshCommand(TextCommand, DiredBaseCommand):
     """
@@ -400,3 +409,363 @@ class DiredGotoCommand(TextCommand, DiredBaseCommand):
 
     def goto(self, path):
         show(self.view.window(), path, view_id=self.view.id())
+
+
+from sublime_plugin import EventListener
+from .common import first
+
+
+def groups_on_preview(window) :
+    """
+    Retrun group number of dired(active) and preview.
+    """
+    groups = window.num_groups()
+    active_group = window.active_group()
+
+    # Usually, preview group is made the right side of dired(active) group.
+    if active_group < groups - 1 or groups == 1 :
+        return [active_group, active_group + 1]
+
+    # If the dired(active) group is the rightmost of window,
+    # preview group is made the left side of it.
+    else :
+        return [active_group, active_group - 1]
+
+
+class DiredPreviewCommand(TextCommand, DiredBaseCommand):
+    """
+    Toggle the preview mode and set the groups.
+    """
+    def run(self, edit):        
+        window = self.view.window()
+        preview_id = self.view.settings().get('preview_id')
+        preview_view = first(window.views(), lambda v: v.id() == preview_id)
+
+        # Preview mode on.
+        if not 'Preview: ' in self.view.name()[0:9] :
+            if not self.view.settings().get('preview_key') :
+                self.view.settings().set('preview_key', True)
+
+                # If user clicked in dired(active) view when he/she was previewing 
+                # a directory, it remain the preview view but preview_key become 
+                # "False". This code is to close the remained preview view.
+                if preview_view :
+                    window.run_command('dired_preview_close')
+
+                self.view.settings().set('initial_group', window.num_groups())
+                if self.view.settings().get('initial_group') == 1 :
+                    window.run_command("set_layout", {"cols": [0.0, 0.5, 1.0], "rows": [0.0, 1.0], "cells": [[0, 0, 1, 1], [1, 0, 2, 1]]})
+                    window.focus_group(0)
+                
+                path_list = get_path_list(self.path, self.get_selected(), False)
+
+                if path_list :
+                    window.run_command('dired_preview_refresh', {'path':path_list[0]})
+
+            # Preview mode off.
+            else :
+                window.run_command('dired_preview_close')
+                self.view.settings().set('preview_key', False)
+
+
+class DiredPreviewCloseCommand(TextCommand, DiredBaseCommand):
+    """
+    Close preview view.
+    """
+    def run(self, edit):        
+        window = self.view.window()
+
+        # Close preview without closing editting file/s.
+        groups = groups_on_preview(window)
+
+        # Get directory preview view.
+        preview_id = self.view.settings().get('preview_id')
+        preview_view = first(window.views(), lambda v: v.id() == preview_id)
+        window.focus_group(groups[1])
+
+        # For image file preview.
+        if isinstance(preview_view, type(None)): 
+            if not window.active_view() :
+                window.run_command('close_file')
+            else :
+                preview_view = window.active_view()
+
+        # For directory and text/binary file preview.
+        if preview_view :
+            if preview_view.is_scratch() :
+                window.focus_view(preview_view)
+                preview_view.window().run_command('close_file')
+        
+        # Reset to the initial group.
+        if self.view.settings().get('initial_group') == 1 :
+            window.run_command("set_layout", {"cols": [0.0, 1.0],"rows": [0.0, 1.0],"cells": [[0, 0, 1, 1]]})
+        else :
+            window.focus_group(groups[0])
+
+
+class DiredPreviewEventListener(EventListener, DiredBaseCommand):
+    def on_selection_modified(self, view):
+        self.view = view
+        if 'text.dired' in self.view.scope_name(self.view.sel()[0].a) :
+            if self.view.settings().get('preview_key') :
+                path_list = get_path_list(self.path, self.get_selected(), False)
+
+                if path_list :
+                    self.view.settings().set('preview_key', False)
+                    self.view.window().run_command('dired_preview_refresh', {'path':path_list[0]})
+                    self.view.settings().set('preview_key', True)
+
+
+class DiredPreviewRefreshCommand(TextCommand, DiredBaseCommand):
+    def run(self, view, path):
+        window = self.view.window()
+        groups = groups_on_preview(window)
+        window.focus_group(groups[1])
+
+        # Get directory preview view.
+        preview_id = self.view.settings().get('preview_id')
+        preview_view = first(window.views(), lambda v: v.id() == preview_id)
+
+
+        if os.path.isfile(path):
+            if preview_view :
+                window.focus_view(preview_view)
+                window.run_command('close_file')
+            window.open_file(path, sublime.TRANSIENT)
+            try :
+                window.active_view().set_read_only(True)
+                window.active_view().set_scratch(True)
+            except :
+                pass
+
+        elif os.path.isdir(path):
+            if not preview_view :
+                show(window, path)
+            else :
+                show(window, path, view_id=preview_id)
+            window.active_view().set_name("Preview: " +  window.active_view().name())
+            self.view.settings().set('preview_id' , window.active_view().id())
+        
+        window.focus_group(groups[0])
+
+
+def bookmarks():
+    return sublime.load_settings('dired.sublime-settings').get('bookmarks', [])
+
+
+def project(window) :
+    pr = []
+    try :
+        pr_data = window.project_data()['folders']
+        for item in pr_data:
+            pr.append(item['path'])
+    except :
+        pass
+    return pr
+
+
+def get_path_list(path, filenames, dirs_only):
+    path_list = []
+    if filenames :
+        for fn in filenames :
+            if dirs_only and os.path.isdir(join(path, fn)) :
+                 path_list.append(join(path, fn))
+            elif not dirs_only :
+                 path_list.append(join(path, fn))
+    return path_list
+
+
+class DiredAddCommand(TextCommand, DiredBaseCommand):
+    """
+    This command show quick panel to select the selected/marked directories 
+    or current directory that are/is added to bookmark or project.
+    """
+    def run(self, edit, target):
+        qp_list = []
+        path_list = []
+
+        selected_path = get_path_list(self.path, self.get_marked() or self.get_selected(), True)
+        current_path = [self.path]
+
+        note = ["Selected dirrectory / Marked directories to " + target, "Current directory to " + target]
+
+        for i, lst in enumerate([selected_path, current_path]) :
+            if not len(lst) == 0 :
+                qp_list.append([note[i], str(lst)[1:-1].replace('\'', '')])
+                path_list.append(lst)
+
+        def on_done(select) :
+            if not select == -1 :
+                if target == 'bookmark' :
+                    cmd = 'dired_add_bookmark'
+                elif target == 'project' :
+                    cmd = 'dired_add_project'
+                self.view.run_command(cmd, {'dirs': path_list[select]})
+
+        self.view.window().show_quick_panel(qp_list, on_done)        
+
+
+class DiredAddProjectCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit, dirs):
+        for path in dirs :
+            if os.path.isdir(path) :
+                pr_data = self.view.window().project_data()
+                try :
+                    pr_data['folders'].append({'follow_symlinks': True, 'path':path})
+                except :
+                    pr_data = {'folders' : [{'follow_symlinks': True, 'path':path}]}
+                self.view.window().set_project_data(pr_data)
+                sublime.status_message('Add to this project.')
+                self.view.erase_regions('marked')
+
+
+class DiredRemoveFromProjectCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit):
+        pr_data = self.view.window().project_data()
+        pr = project(self.view.window())
+
+        def on_done(select) :
+            if not select == -1 :
+                pr_data['folders'].pop(select)
+                self.view.window().set_project_data(pr_data)
+
+        self.view.window().show_quick_panel(pr, on_done)        
+
+
+class DiredAddBookmarkCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit, dirs):
+        settings = sublime.load_settings('dired.sublime-settings')
+        
+        for key_name in ['reuse_view', 'bookmarks']:
+            settings.set(key_name, settings.get(key_name))
+
+        bm = bookmarks()
+        for path in dirs :
+            bm.append(path)
+            settings.set('bookmarks', bm)
+
+            # This command makes/writes a sublime-settings file at Packages/User/,
+            # and doesn't write into one at Packages/dired/.
+            sublime.save_settings('dired.sublime-settings')
+
+            sublime.status_message('Bookmarking succeeded.')
+            self.view.erase_regions('marked')
+
+
+class DiredRemoveBookmarkCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit):
+        settings = sublime.load_settings('dired.sublime-settings')
+        
+        for key_name in ['reuse_view', 'bookmarks']:
+            settings.set(key_name, settings.get(key_name))
+
+        bm = bookmarks()
+
+        def on_done(select) :
+            if not select == -1 :
+                bm.pop(select)
+                sublime.status_message('Remove selected bookmark.')
+                settings.set('bookmarks', bm)
+                sublime.save_settings('dired.sublime-settings')
+
+        self.view.window().show_quick_panel(bm, on_done)        
+
+
+class DiredGotoAnywhereCommand(TextCommand, DiredCommand):
+    """
+    This command is to go to a path selected with quick panel.
+
+    The selectable paths are the path of current directory, home, bookmarks,
+    project directories and inputted one.
+
+    This was designed to be the alternative to dired and dired_goto command.
+
+    This code is used the code of dired_select command.
+    """
+    def run(self, edit, new_view=False):
+        self.window = self.view.window()
+        path = self.view and self.view.file_name()
+        home = os.path.expanduser('~')
+        bm = bookmarks()
+        pr = project(self.window)
+
+        qp_list = []
+        if path and new_view :
+            qp_list.append('Current dir: ' + os.path.split(path)[0])
+        if home :
+            qp_list.append('Home: ' + home)
+        for item in bm :
+            qp_list.append('Bookmark: ' + item)
+        for item in pr :
+            qp_list.append('Project: ' + item)
+        qp_list.append('Goto directory')
+        
+        def on_done(select):
+            if not select == -1 :
+                fqn = qp_list[select]
+                if 'Current dir' in fqn :
+                    fqn = fqn[13:]
+                elif 'Home' in fqn :
+                    fqn = fqn[6:]
+                elif 'Bookmark' in fqn :
+                    fqn = fqn[10:]
+                elif 'Project' in fqn :
+                    fqn = fqn[9:]
+                elif 'Goto directory' in fqn :
+                    prompt.start('Directory:', self.window, self._determine_path(), self._show)
+
+                # If reuse view is turned on and the only item is a directory, 
+                # refresh the existing view.
+                if not new_view and reuse_view():
+                    if isdir(fqn):
+                        show(self.view.window(), fqn, view_id=self.view.id())
+                        return
+
+                if isdir(fqn):
+                    show(self.view.window(), fqn, ignore_existing=new_view)
+
+        self.view.window().show_quick_panel(qp_list, on_done)
+
+
+class DiredJumptoNameCommand(TextCommand, DiredBaseCommand):
+    """
+    Fuzzy-Search file/directory name in current directory.
+    """
+    def run(self, view):
+        path = self.path
+        window = self.view.window()
+        names = os.listdir(path)
+        f = []
+        for name in names:
+            if isdir(join(path, name)):
+                name += os.sep
+            f.append(name)
+
+        def on_done(select):
+            if not select == -1 :
+                line_str = f[select]
+                r_list = self.view.find_all(line_str, sublime.LITERAL)
+
+                # Make match whole word.
+                if len(r_list) > 1 :
+                    for r in r_list :
+                        find_str = self.view.substr(self.view.line(r))
+                        if find_str == line_str :
+                            break
+                else :
+                    r = r_list[0]
+
+                if self.p_key :
+                    window.run_command('dired_preview_refresh', {'path':path + line_str})
+
+
+                self.view.sel().clear()
+                self.view.sel().add(r.a)
+                self.view.show(r.a)
+
+                if self.p_key :
+                    self.view.settings().set('preview_key', True)
+
+        self.p_key = self.view.settings().get('preview_key')
+        self.view.settings().set('preview_key', False)
+        window.show_quick_panel(f, on_done)

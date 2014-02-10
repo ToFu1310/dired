@@ -87,6 +87,8 @@ class DiredRefreshCommand(TextCommand, DiredBaseCommand):
             Optional filename to put the cursor on.
         """
         path = self.path
+        self.view.window().run_command('dired_add_history', {'dirs':[path]})
+
 
         names = os.listdir(path)
         f = []
@@ -400,12 +402,14 @@ class DiredUpCommand(TextCommand, DiredBaseCommand):
         show(self.view.window(), parent, view_id, goto=basename(self.path.rstrip(os.sep)))
 
 
+
 class DiredGotoCommand(TextCommand, DiredBaseCommand):
     """
     Prompt for a new directory.
     """
     def run(self, edit):
         prompt.start('Goto:', self.view.window(), self.path, self.goto)
+
 
     def goto(self, path):
         show(self.view.window(), path, view_id=self.view.id())
@@ -600,6 +604,8 @@ class DiredAddCommand(TextCommand, DiredBaseCommand):
                     cmd = 'dired_add_bookmark'
                 elif target == 'project' :
                     cmd = 'dired_add_project'
+                elif target == 'history' :
+                    cmd = 'dired_add_history'
                 self.view.run_command(cmd, {'dirs': path_list[select]})
 
         self.view.window().show_quick_panel(qp_list, on_done)        
@@ -688,6 +694,7 @@ class DiredGotoAnywhereCommand(TextCommand, DiredCommand):
         home = os.path.expanduser('~')
         bm = bookmarks()
         pr = project(self.window)
+        hist = history()
 
         qp_list = []
         if path and new_view :
@@ -698,6 +705,8 @@ class DiredGotoAnywhereCommand(TextCommand, DiredCommand):
             qp_list.append('Bookmark: ' + item)
         for item in pr :
             qp_list.append('Project: ' + item)
+        for item in hist :
+            qp_list.append('History: ' + item)
         qp_list.append('Goto directory')
         
         def on_done(select):
@@ -710,6 +719,8 @@ class DiredGotoAnywhereCommand(TextCommand, DiredCommand):
                 elif 'Bookmark' in fqn :
                     fqn = fqn[10:]
                 elif 'Project' in fqn :
+                    fqn = fqn[9:]
+                elif 'History' in fqn :
                     fqn = fqn[9:]
                 elif 'Goto directory' in fqn :
                     prompt.start('Directory:', self.window, self._determine_path(), self._show)
@@ -769,3 +780,54 @@ class DiredJumptoNameCommand(TextCommand, DiredBaseCommand):
         self.p_key = self.view.settings().get('preview_key')
         self.view.settings().set('preview_key', False)
         window.show_quick_panel(f, on_done)
+
+
+def history():
+    return sublime.load_settings('dired.sublime-settings').get('history', [])
+
+
+class DiredAddHistoryCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit, dirs):
+        settings = sublime.load_settings('dired.sublime-settings')
+        
+        for key_name in ['reuse_view', 'bookmarks', 'history_size','history']:
+            settings.set(key_name, settings.get(key_name))
+
+        hist = history()
+        hist_size = settings.get('history_size')
+        print(hist_size)
+        if not hist_size :
+            hist_size = 30
+
+        for path in dirs :
+            if not path in hist :
+                hist.append(path)
+                if len(hist) > hist_size :
+                    for i in range(len(hist) - hist_size):
+                        hist.pop(0)
+
+        settings.set('history', hist)
+
+        # This command makes/writes a sublime-settings file at Packages/User/,
+        # and doesn't write into one at Packages/dired/.
+        sublime.save_settings('dired.sublime-settings')
+
+
+class DiredRemoveHistoryCommand(TextCommand, DiredBaseCommand):
+    def run(self, edit):
+        settings = sublime.load_settings('dired.sublime-settings')
+        
+        for key_name in ['reuse_view', 'bookmarks', 'history_size', 'history']:
+            settings.set(key_name, settings.get(key_name))
+
+        hist = history()
+
+        def on_done(select) :
+            if not select == -1 :
+                hist.pop(select)
+                sublime.status_message('Remove selected history.')
+                settings.set('history', hist)
+                sublime.save_settings('dired.sublime-settings')
+
+        self.view.window().show_quick_panel(hist, on_done)        
+

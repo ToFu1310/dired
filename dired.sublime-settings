@@ -1,4 +1,6 @@
 {
     "reuse_view": true,
-    "bookmarks":[]
+    "bookmarks":[],
+    "history_size" : 30,
+    "history" :[]
 }

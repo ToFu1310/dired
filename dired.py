@@ -795,7 +795,6 @@ class DiredAddHistoryCommand(TextCommand, DiredBaseCommand):
 
         hist = history()
         hist_size = settings.get('history_size')
-        print(hist_size)
         if not hist_size :
             hist_size = 30
 
